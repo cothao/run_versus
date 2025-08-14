@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { mockAppData } from '../data/mockData';
 import { ProgressBar } from '../components/ProgressBar';
 import { DailyMatchup } from '../components/DailyMatchup';
 import { formatNumber } from '../lib/utils';
@@ -63,14 +62,103 @@ function StepCounter({ steps, label, variant = 'default', className = '' }) {
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
+  const [appData, setAppData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const { teams, todaysMatchup } = mockAppData;
-  const [teamRed, teamBlue] = teams;
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://2737dw2pq5.execute-api.us-east-1.amazonaws.com/dev');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const data = await response.json();
+        console.log("data:", data);
+        
+        // Parse the JSON string from data.body
+        const users = JSON.parse(data.body);
+        
+        // Transform data into expected format
+        const transformedData = transformApiData(users);
+        setAppData(transformedData);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Calculate overall stats
-  const totalTodaySteps = teams.reduce((sum, team) => sum + team.todayTotalSteps, 0);
-  const redWinning = teamRed.todayTotalSteps > teamBlue.todayTotalSteps;
-  const stepDifference = Math.abs(teamRed.todayTotalSteps - teamBlue.todayTotalSteps);
+    fetchData();
+  }, []);
+
+  // Transform API data into expected format
+  const transformApiData = (users) => {
+    // Split users into two teams (you can modify this logic as needed)
+    const midpoint = Math.ceil(users.length / 2);
+    const teamRedUsers = users.slice(0, midpoint);
+    const teamBlueUsers = users.slice(midpoint);
+
+    // Calculate team totals
+    const teamRedTotal = teamRedUsers.reduce((sum, user) => sum + (user.StepsToday || 0), 0);
+    const teamBlueTotal = teamBlueUsers.reduce((sum, user) => sum + (user.StepsToday || 0), 0);
+
+    // Create teams structure
+    const teams = [
+      {
+        id: 'red',
+        name: 'Fire Walkers',
+        todayTotalSteps: teamRedTotal,
+        members: teamRedUsers.map(user => ({
+          id: user.ID,
+          name: user.Name,
+          todaySteps: user.StepsToday || 0,
+          totalSteps: user.TotalSteps || 0
+        }))
+      },
+      {
+        id: 'blue',
+        name: 'Storm Striders',
+        todayTotalSteps: teamBlueTotal,
+        members: teamBlueUsers.map(user => ({
+          id: user.ID,
+          name: user.Name,
+          todaySteps: user.StepsToday || 0,
+          totalSteps: user.TotalSteps || 0
+        }))
+      }
+    ];
+
+    // Get top performers for daily matchup
+    const topRedPerformer = teamRedUsers.reduce((prev, current) => 
+      (prev.StepsToday > current.StepsToday) ? prev : current
+    );
+    const topBluePerformer = teamBlueUsers.reduce((prev, current) => 
+      (prev.StepsToday > current.StepsToday) ? prev : current
+    );
+
+    const todaysMatchup = {
+      player1: {
+        name: topRedPerformer.Name,
+        steps: topRedPerformer.StepsToday || 0,
+        team: 'red'
+      },
+      player2: {
+        name: topBluePerformer.Name,
+        steps: topBluePerformer.StepsToday || 0,
+        team: 'blue'
+      }
+    };
+
+    return {
+      teams,
+      todaysMatchup
+    };
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -81,16 +169,54 @@ export default function Home() {
     }));
   }, []);
 
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-bold text-electric mb-2">StepVersus</div>
-          <div className="text-muted-foreground">Loading epic battle arena...</div>
+          <div className="text-muted-foreground">
+            {loading ? 'Loading epic battle arena...' : 'Initializing...'}
+          </div>
         </div>
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-electric mb-2">StepVersus</div>
+          <div className="text-red-500 mb-2">Error loading data: {error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-electric text-white rounded-lg hover:bg-electric/80"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!appData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-electric mb-2">StepVersus</div>
+          <div className="text-muted-foreground">No data available</div>
+        </div>
+      </div>
+    );
+  }
+
+  const { teams, todaysMatchup } = appData;
+  const [teamRed, teamBlue] = teams;
+
+  // Calculate overall stats
+  const totalTodaySteps = teams.reduce((sum, team) => sum + team.todayTotalSteps, 0);
+  const redWinning = teamRed.todayTotalSteps > teamBlue.todayTotalSteps;
+  const stepDifference = Math.abs(teamRed.todayTotalSteps - teamBlue.todayTotalSteps);
 
   return (
     <div className="min-h-screen bg-background">

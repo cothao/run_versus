@@ -14,19 +14,21 @@ export function DailyMatchup({ matchup, className }) {
   const [mounted, setMounted] = useState(false);
   const [formattedDate, setFormattedDate] = useState('');
 
-  const winner = matchup.winner;
-  const isTeam1Winner = winner === matchup.team1User.id;
-  const isTeam2Winner = winner === matchup.team2User.id;
-  const isTie = matchup.team1Steps === matchup.team2Steps;
+  // Handle the new API data structure
+  const player1 = matchup.player1;
+  const player2 = matchup.player2;
+  const isPlayer1Winner = player1.steps > player2.steps;
+  const isPlayer2Winner = player2.steps > player1.steps;
+  const isTie = player1.steps === player2.steps;
 
   useEffect(() => {
     setMounted(true);
-    setFormattedDate(new Date(matchup.date).toLocaleDateString('en-US', {
+    setFormattedDate(new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric'
     }));
-  }, [matchup.date]);
+  }, []);
 
   return (
     <div className={cn(
@@ -52,38 +54,38 @@ export function DailyMatchup({ matchup, className }) {
 
         {/* VS Layout */}
         <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
-          {/* Team 1 User */}
+          {/* Player 1 */}
           <div className="flex-1 text-center">
             <div className="relative group">
               {/* Large Team Member Image */}
               <div className={cn(
                 'relative w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-4 rounded-3xl overflow-hidden shadow-2xl transition-transform duration-300 group-hover:scale-105',
-                isTeam1Winner && 'ring-4 ring-team-red ring-offset-4 ring-offset-background'
+                isPlayer1Winner && 'ring-4 ring-team-red ring-offset-4 ring-offset-background'
               )}>
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-red-600 to-orange-600"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-4xl sm:text-5xl font-black text-white text-shadow">
-                    {matchup.team1User.avatar || matchup.team1User.name.split(' ').map(n => n[0]).join('')}
+                    {player1.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
                 {/* Flame Effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-red-500/30 to-transparent animate-battle-pulse"></div>
               </div>
               
-              {isTeam1Winner && (
+              {isPlayer1Winner && (
                 <div className="absolute -top-2 -right-2 bg-team-red text-team-red-foreground rounded-full p-2 shadow-lg animate-bounce">
                   <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
               )}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">{matchup.team1User.name}</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">{player1.name}</h3>
             <div className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-team-red-light/10 text-team-red border border-team-red/20">
               🔥 Fire Walkers
             </div>
             <div className="mt-3">
               <div className="text-2xl font-bold text-team-red">
-                {formatNumber(matchup.team1Steps)}
+                {formatNumber(player1.steps)}
               </div>
               <div className="text-sm text-muted-foreground font-medium mt-1">
                 Steps Today
@@ -98,38 +100,38 @@ export function DailyMatchup({ matchup, className }) {
             </div>
           </div>
 
-          {/* Team 2 User */}
+          {/* Player 2 */}
           <div className="flex-1 text-center">
             <div className="relative group">
               {/* Large Team Member Image */}
               <div className={cn(
                 'relative w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-4 rounded-3xl overflow-hidden shadow-2xl transition-transform duration-300 group-hover:scale-105',
-                isTeam2Winner && 'ring-4 ring-team-blue ring-offset-4 ring-offset-background'
+                isPlayer2Winner && 'ring-4 ring-team-blue ring-offset-4 ring-offset-background'
               )}>
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600"></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-4xl sm:text-5xl font-black text-white text-shadow">
-                    {matchup.team2User.avatar || matchup.team2User.name.split(' ').map(n => n[0]).join('')}
+                    {player2.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
                 {/* Lightning Effect */}
                 <div className="absolute inset-0 bg-gradient-to-t from-blue-500/30 to-transparent animate-battle-pulse"></div>
               </div>
               
-              {isTeam2Winner && (
+              {isPlayer2Winner && (
                 <div className="absolute -top-2 -right-2 bg-team-blue text-team-blue-foreground rounded-full p-2 shadow-lg animate-bounce">
                   <Trophy className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
               )}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">{matchup.team2User.name}</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">{player2.name}</h3>
             <div className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-team-blue-light/10 text-team-blue border border-team-blue/20">
               ⛈️ Storm Striders
             </div>
             <div className="mt-3">
               <div className="text-2xl font-bold text-team-blue">
-                {formatNumber(matchup.team2Steps)}
+                {formatNumber(player2.steps)}
               </div>
               <div className="text-sm text-muted-foreground font-medium mt-1">
                 Steps Today
@@ -139,12 +141,12 @@ export function DailyMatchup({ matchup, className }) {
         </div>
 
         {/* Winner announcement */}
-        {winner && !isTie && (
+        {!isTie && (
           <div className="text-center mt-8 p-4 rounded-2xl bg-gradient-to-r from-electric/20 to-purple-400/20 border border-electric/30">
             <div className="flex items-center justify-center space-x-2 text-electric font-bold text-lg">
               <Trophy className="w-6 h-6" />
               <span>
-                {isTeam1Winner ? matchup.team1User.name : matchup.team2User.name} wins today!
+                {isPlayer1Winner ? player1.name : player2.name} wins today!
               </span>
             </div>
           </div>
