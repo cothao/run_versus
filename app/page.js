@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ProgressBar } from '../components/ProgressBar';
 import { DailyMatchup } from '../components/DailyMatchup';
+import { Leaderboard } from '../components/Leaderboard';
 import { formatNumber } from '../lib/utils';
 
 console.log("VERSION 1.0.0 - Initial release with basic features");
@@ -384,6 +385,10 @@ export default function Home() {
           <div>
             <DailyMatchup matchup={todaysMatchup} />
           </div>
+        </section>
+
+        <section>
+          <Leaderboard teams={teams} />
         </section>
 
         {/* Footer */}
