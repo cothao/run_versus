@@ -13,6 +13,7 @@ import re
 import requests
 import json
 import hashlib
+from zoneinfo import ZoneInfo  # Python 3.9+
 
 # URL to scrape
 url = "https://app.wellnesscoach.live/challenge/68938ec5c53924ac556d2579?inTeamsSSO=true&from=CHALLENGE_LISTING_BANNER&select_my_steps=1"

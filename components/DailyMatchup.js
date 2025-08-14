@@ -10,7 +10,9 @@ const Trophy = ({ className }) => (
   </svg>
 );
 
-export function DailyMatchup({ matchup, className }) {
+export function DailyMatchup({ matchup }) {
+  const { player1, player2, showWinner = false } = matchup;
+
   const [mounted, setMounted] = useState(false);
   const [formattedDate, setFormattedDate] = useState('');
 
@@ -18,17 +20,17 @@ export function DailyMatchup({ matchup, className }) {
   console.log('DailyMatchup received matchup:', matchup);
 
   // Handle the new API data structure with validation
-  const player1 = matchup?.player1 || { name: 'No Player', steps: 0, team: 'red', playerNumber: 0 };
-  const player2 = matchup?.player2 || { name: 'No Player', steps: 0, team: 'blue', playerNumber: 0 };
+  const safePlayer1 = player1 || { name: 'No Player', steps: 0, team: 'red', playerNumber: 0 };
+  const safePlayer2 = player2 || { name: 'No Player', steps: 0, team: 'blue', playerNumber: 0 };
   
-  const safeSteps1 = typeof player1.steps === 'number' ? player1.steps : 0;
-  const safeSteps2 = typeof player2.steps === 'number' ? player2.steps : 0;
+  const safeSteps1 = typeof safePlayer1.steps === 'number' ? safePlayer1.steps : 0;
+  const safeSteps2 = typeof safePlayer2.steps === 'number' ? safePlayer2.steps : 0;
   
   const isPlayer1Winner = safeSteps1 > safeSteps2;
   const isPlayer2Winner = safeSteps2 > safeSteps1;
   const isTie = safeSteps1 === safeSteps2;
 
-  console.log('DailyMatchup processed:', { player1, player2, isPlayer1Winner, isPlayer2Winner, isTie });
+  console.log('DailyMatchup processed:', { player1: safePlayer1, player2: safePlayer2, isPlayer1Winner, isPlayer2Winner, isTie });
 
   useEffect(() => {
     setMounted(true);
@@ -39,10 +41,21 @@ export function DailyMatchup({ matchup, className }) {
     }));
   }, []);
 
+  const getWinnerText = () => {
+    if (!showWinner) return null;
+    
+    if (safePlayer1.steps > safePlayer2.steps) {
+      return `🏆 ${safePlayer1.name} WINS!`;
+    } else if (safePlayer2.steps > safePlayer1.steps) {
+      return `🏆 ${safePlayer2.name} WINS!`;
+    } else {
+      return "🤝 IT'S A TIE!";
+    }
+  };
+
   return (
     <div className={cn(
-      'relative rounded-3xl bg-card-80 backdrop-blur-sm border border-border-50 p-6 overflow-hidden',
-      className
+      'relative rounded-3xl bg-card-80 backdrop-blur-sm border border-border-50 p-6 overflow-hidden'
     )}>
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-electric/5 to-purple-400/5"></div>
@@ -62,7 +75,7 @@ export function DailyMatchup({ matchup, className }) {
           {/* Add debug info in development */}
           {process.env.NODE_ENV === 'development' && (
             <p className="text-xs text-gray-500 mt-1">
-              Red: {safeSteps1} vs Blue: {safeSteps2} (Players: {player1.playerNumber} vs {player2.playerNumber})
+              Red: {safeSteps1} vs Blue: {safeSteps2} (Players: {safePlayer1.playerNumber} vs {safePlayer2.playerNumber})
             </p>
           )}
         </div>
@@ -81,7 +94,7 @@ export function DailyMatchup({ matchup, className }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-4xl sm:text-5xl font-black text-white text-shadow">
-                    {player1.name.split(' ').map(n => n[0]).join('')}
+                    {safePlayer1.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
                 {/* Flame Effect */}
@@ -94,7 +107,7 @@ export function DailyMatchup({ matchup, className }) {
                 </div>
               )}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">{player1.name}</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">{safePlayer1.name}</h3>
             <div className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-team-red-light/10 text-team-red border border-team-red/20">
               🔥 Fire Walkers
             </div>
@@ -127,7 +140,7 @@ export function DailyMatchup({ matchup, className }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-4xl sm:text-5xl font-black text-white text-shadow">
-                    {player2.name.split(' ').map(n => n[0]).join('')}
+                    {safePlayer2.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
                 {/* Lightning Effect */}
@@ -140,7 +153,7 @@ export function DailyMatchup({ matchup, className }) {
                 </div>
               )}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold mb-2">{player2.name}</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-2">{safePlayer2.name}</h3>
             <div className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-team-blue-light/10 text-team-blue border border-team-blue/20">
               ⛈️ Storm Striders
             </div>
@@ -155,25 +168,16 @@ export function DailyMatchup({ matchup, className }) {
           </div>
         </div>
 
-        {/* Winner announcement */}
-        {!isTie && (
-          <div className="text-center mt-8 p-4 rounded-2xl bg-gradient-to-r from-electric/20 to-purple-400/20 border border-electric/30">
-            <div className="flex items-center justify-center space-x-2 text-electric font-bold text-lg">
-              <Trophy className="w-6 h-6" />
-              <span>
-                {isPlayer1Winner ? player1.name : player2.name} wins today!
-              </span>
-            </div>
-          </div>
-        )}
-
-        {isTie && (
-          <div className="text-center mt-8 p-4 rounded-2xl bg-muted/50 border border-muted">
-            <div className="text-muted-foreground font-medium">
-              {safeSteps1 === 0 && safeSteps2 === 0 
-                ? "Battle starts when players take their first steps! 🔥" 
-                : "It's a tie! Both champions crushed it today 🔥"
-              }
+        {/* Winner announcement - only show in last 5 minutes */}
+        {showWinner && (
+          <div className="mt-6 text-center">
+            <div className="bg-gradient-to-r from-yellow-400/20 to-orange-400/20 rounded-xl p-4 border border-yellow-400/30">
+              <div className="text-xl sm:text-2xl font-black text-yellow-400 animate-pulse">
+                {getWinnerText()}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Final results at midnight!
+              </div>
             </div>
           </div>
         )}

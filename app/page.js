@@ -60,6 +60,44 @@ function StepCounter({ steps, label, variant = 'default', className = '' }) {
   );
 }
 
+// Add helper functions for random matchup and time checking
+function getDaysSinceEpoch() {
+  const now = new Date();
+  // Convert to CST (UTC-6)
+  const cstOffset = -6 * 60; // CST is UTC-6
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const cst = new Date(utc + (cstOffset * 60000));
+  
+  // Get days since epoch for CST date
+  const cstDate = new Date(cst.getFullYear(), cst.getMonth(), cst.getDate());
+  return Math.floor(cstDate.getTime() / (1000 * 60 * 60 * 24));
+}
+
+function isLastFiveMinutes() {
+  const now = new Date();
+  // Convert to CST
+  const cstOffset = -6 * 60;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const cst = new Date(utc + (cstOffset * 60000));
+  
+  const hours = cst.getHours();
+  const minutes = cst.getMinutes();
+  
+  // Check if it's between 11:55 PM and 11:59 PM CST
+  return hours === 23 && minutes >= 55;
+}
+
+function getRandomPlayerForDay(players, daysSinceEpoch, teamId) {
+  if (!players || players.length === 0) {
+    return { Name: `No ${teamId} Players`, StepsToday: 0, PlayerNumber: 0 };
+  }
+  
+  // Use day + team as seed for consistent random selection per day
+  const seed = daysSinceEpoch + teamId.charCodeAt(0);
+  const index = seed % players.length;
+  return players[index];
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
@@ -167,30 +205,27 @@ export default function Home() {
       }
     ];
 
-    // Get top performers for daily matchup
-    const topRedPerformer = teamRedUsers.length > 0 ? teamRedUsers.reduce((prev, current) => 
-      (prev.StepsToday || 0) > (current.StepsToday || 0) ? prev : current
-    ) : { Name: 'No Red Players', StepsToday: 0, PlayerNumber: 0 };
-    
-    const topBluePerformer = teamBlueUsers.length > 0 ? teamBlueUsers.reduce((prev, current) => 
-      (prev.StepsToday || 0) > (current.StepsToday || 0) ? prev : current
-    ) : { Name: 'No Blue Players', StepsToday: 0, PlayerNumber: 0 };
+    // Get random players for daily matchup instead of top performers
+    const daysSinceEpoch = getDaysSinceEpoch();
+    const redMatchupPlayer = getRandomPlayerForDay(teamRedUsers, daysSinceEpoch, 'red');
+    const blueMatchupPlayer = getRandomPlayerForDay(teamBlueUsers, daysSinceEpoch, 'blue');
 
-    console.log('Top performers - Red:', topRedPerformer, 'Blue:', topBluePerformer);
+    console.log('Random matchup players - Red:', redMatchupPlayer, 'Blue:', blueMatchupPlayer);
 
     const todaysMatchup = {
       player1: {
-        name: topRedPerformer.Name,
-        steps: topRedPerformer.StepsToday || 0,
+        name: redMatchupPlayer.Name,
+        steps: redMatchupPlayer.StepsToday || 0,
         team: 'red',
-        playerNumber: topRedPerformer.PlayerNumber || 0
+        playerNumber: redMatchupPlayer.PlayerNumber || 0
       },
       player2: {
-        name: topBluePerformer.Name,
-        steps: topBluePerformer.StepsToday || 0,
+        name: blueMatchupPlayer.Name,
+        steps: blueMatchupPlayer.StepsToday || 0,
         team: 'blue',
-        playerNumber: topBluePerformer.PlayerNumber || 0
-      }
+        playerNumber: blueMatchupPlayer.PlayerNumber || 0
+      },
+      showWinner: isLastFiveMinutes()
     };
 
     console.log('Final transformed data:', { teams, todaysMatchup });
