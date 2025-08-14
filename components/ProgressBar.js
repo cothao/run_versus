@@ -10,9 +10,16 @@ export function ProgressBar({
   animated = false,
   className 
 }) {
-  const total = value1 + value2;
-  const percentage1 = total > 0 ? (value1 / total) * 100 : 50;
-  const percentage2 = total > 0 ? (value2 / total) * 100 : 50;
+  // Add data validation and logging
+  console.log('ProgressBar received:', { value1, value2, label1, label2 });
+  
+  // Ensure values are numbers
+  const safeValue1 = typeof value1 === 'number' ? value1 : 0;
+  const safeValue2 = typeof value2 === 'number' ? value2 : 0;
+  
+  const total = safeValue1 + safeValue2;
+  const percentage1 = total > 0 ? (safeValue1 / total) * 100 : 50;
+  const percentage2 = total > 0 ? (safeValue2 / total) * 100 : 50;
 
   return (
     <div className={cn('w-full', className)}>
@@ -29,7 +36,7 @@ export function ProgressBar({
           </div>
           <div>
             <div className="text-xl font-black text-team-red animate-pulse">{label1}</div>
-            <div className="text-sm text-team-red/70 font-semibold">{formatNumber(value1)} steps</div>
+            <div className="text-sm text-team-red/70 font-semibold">{formatNumber(safeValue1)} steps</div>
           </div>
         </div>
         
@@ -47,7 +54,7 @@ export function ProgressBar({
         <div className="flex items-center space-x-3">
           <div className="text-right">
             <div className="text-xl font-black text-team-blue animate-pulse">{label2}</div>
-            <div className="text-sm text-team-blue/70 font-semibold">{formatNumber(value2)} steps</div>
+            <div className="text-sm text-team-blue/70 font-semibold">{formatNumber(safeValue2)} steps</div>
           </div>
           <div className="relative">
             <span className="text-4xl filter-drop-shadow animate-bounce">⚡</span>
@@ -158,7 +165,7 @@ export function ProgressBar({
         <div className="text-center">
           <div className="text-xs text-muted-foreground">POWER DIFFERENCE</div>
           <div className="text-lg font-black text-purple-400">
-            {formatNumber(Math.abs(value1 - value2))}
+            {formatNumber(Math.abs(safeValue1 - safeValue2))}
           </div>
         </div>
         

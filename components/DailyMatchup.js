@@ -14,12 +14,21 @@ export function DailyMatchup({ matchup, className }) {
   const [mounted, setMounted] = useState(false);
   const [formattedDate, setFormattedDate] = useState('');
 
-  // Handle the new API data structure
-  const player1 = matchup.player1;
-  const player2 = matchup.player2;
-  const isPlayer1Winner = player1.steps > player2.steps;
-  const isPlayer2Winner = player2.steps > player1.steps;
-  const isTie = player1.steps === player2.steps;
+  // Add data validation and logging
+  console.log('DailyMatchup received matchup:', matchup);
+
+  // Handle the new API data structure with validation
+  const player1 = matchup?.player1 || { name: 'No Player', steps: 0, team: 'red', playerNumber: 0 };
+  const player2 = matchup?.player2 || { name: 'No Player', steps: 0, team: 'blue', playerNumber: 0 };
+  
+  const safeSteps1 = typeof player1.steps === 'number' ? player1.steps : 0;
+  const safeSteps2 = typeof player2.steps === 'number' ? player2.steps : 0;
+  
+  const isPlayer1Winner = safeSteps1 > safeSteps2;
+  const isPlayer2Winner = safeSteps2 > safeSteps1;
+  const isTie = safeSteps1 === safeSteps2;
+
+  console.log('DailyMatchup processed:', { player1, player2, isPlayer1Winner, isPlayer2Winner, isTie });
 
   useEffect(() => {
     setMounted(true);
@@ -50,6 +59,12 @@ export function DailyMatchup({ matchup, className }) {
           <p className="text-muted-foreground text-xs sm:text-sm">
             {mounted ? formattedDate : 'Loading...'}
           </p>
+          {/* Add debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-xs text-gray-500 mt-1">
+              Red: {safeSteps1} vs Blue: {safeSteps2} (Players: {player1.playerNumber} vs {player2.playerNumber})
+            </p>
+          )}
         </div>
 
         {/* VS Layout */}
@@ -85,7 +100,7 @@ export function DailyMatchup({ matchup, className }) {
             </div>
             <div className="mt-3">
               <div className="text-2xl font-bold text-team-red">
-                {formatNumber(player1.steps)}
+                {formatNumber(safeSteps1)}
               </div>
               <div className="text-sm text-muted-foreground font-medium mt-1">
                 Steps Today
@@ -131,7 +146,7 @@ export function DailyMatchup({ matchup, className }) {
             </div>
             <div className="mt-3">
               <div className="text-2xl font-bold text-team-blue">
-                {formatNumber(player2.steps)}
+                {formatNumber(safeSteps2)}
               </div>
               <div className="text-sm text-muted-foreground font-medium mt-1">
                 Steps Today
@@ -155,7 +170,10 @@ export function DailyMatchup({ matchup, className }) {
         {isTie && (
           <div className="text-center mt-8 p-4 rounded-2xl bg-muted/50 border border-muted">
             <div className="text-muted-foreground font-medium">
-              It's a tie! Both champions crushed it today 🔥
+              {safeSteps1 === 0 && safeSteps2 === 0 
+                ? "Battle starts when players take their first steps! 🔥" 
+                : "It's a tie! Both champions crushed it today 🔥"
+              }
             </div>
           </div>
         )}

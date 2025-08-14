@@ -12,6 +12,7 @@ import pytz
 import re
 import requests
 import json
+import hashlib
 
 # URL to scrape
 url = "https://app.wellnesscoach.live/challenge/68938ec5c53924ac556d2579?inTeamsSSO=true&from=CHALLENGE_LISTING_BANNER&select_my_steps=1"
@@ -99,14 +100,27 @@ try:
             steps_today = 0
         else:
             steps_today = steps - prev_steps
-            
+        
+        # Assign teams based on odd/even player position (1-indexed)
+        player_number = idx + 1
+        team_assignment = "red" if player_number % 2 == 1 else "blue"
+        team_name = "Fire Walkers" if team_assignment == "red" else "Storm Striders"
+        
+        # Generate unique ID for player (you can modify this logic as needed)
+        player_id = hashlib.sha256(name.encode()).hexdigest()
+        
         leaderboard_data.append({
+            "ID": player_id,
             "Name": name, 
             "Date": current_cst_date,
-            "Total Steps": steps, 
-            "Steps Today": steps_today
+            "StepsToday": steps_today,
+            "TotalSteps": steps,
+            "TeamAssignment": team_assignment,
+            "TeamName": team_name,
+            "PlayerNumber": player_number,
+            "LastUpdated": datetime.now(cst).isoformat()
         })
-        print(f"{idx+1}: {name} - {steps}")
+        print(f"{player_number}: {name} - {steps} steps (Team: {team_name})")
 except Exception as e:
     print("Could not find name or step elements:", e)
 

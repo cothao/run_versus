@@ -76,10 +76,11 @@ export default function Home() {
           throw new Error('Failed to fetch data');
         }
         const data = await response.json();
-        console.log("data:", data);
+        console.log("API data:", data);
         
         // Parse the JSON string from data.body
         const users = JSON.parse(data.body);
+        console.log("Parsed users:", users);
         
         // Transform data into expected format
         const transformedData = transformApiData(users);
@@ -98,14 +99,40 @@ export default function Home() {
 
   // Transform API data into expected format
   const transformApiData = (users) => {
-    // Split users into two teams (you can modify this logic as needed)
-    const midpoint = Math.ceil(users.length / 2);
-    const teamRedUsers = users.slice(0, midpoint);
-    const teamBlueUsers = users.slice(midpoint);
+    console.log('Raw users data:', users);
+    
+    // Validate users data
+    if (!Array.isArray(users) || users.length === 0) {
+      console.warn('No valid users data received');
+      return {
+        teams: [
+          { id: 'red', name: 'Fire Walkers', todayTotalSteps: 0, members: [] },
+          { id: 'blue', name: 'Storm Striders', todayTotalSteps: 0, members: [] }
+        ],
+        todaysMatchup: {
+          player1: { name: 'No players', steps: 0, team: 'red', playerNumber: 0 },
+          player2: { name: 'No players', steps: 0, team: 'blue', playerNumber: 0 }
+        }
+      };
+    }
 
-    // Calculate team totals
+    // Filter users by team assignment (data already has TeamAssignment from scraper)
+    const teamRedUsers = users.filter(user => user.TeamAssignment === 'red');
+    const teamBlueUsers = users.filter(user => user.TeamAssignment === 'blue');
+    
+    console.log('Team Red Users:', teamRedUsers);
+    console.log('Team Blue Users:', teamBlueUsers);
+
+    // Calculate team totals using StepsToday field for daily stats
     const teamRedTotal = teamRedUsers.reduce((sum, user) => sum + (user.StepsToday || 0), 0);
     const teamBlueTotal = teamBlueUsers.reduce((sum, user) => sum + (user.StepsToday || 0), 0);
+    
+    // Calculate team totals using TotalSteps for progress bar
+    const teamRedTotalSteps = teamRedUsers.reduce((sum, user) => sum + (user.TotalSteps || 0), 0);
+    const teamBlueTotalSteps = teamBlueUsers.reduce((sum, user) => sum + (user.TotalSteps || 0), 0);
+    
+    console.log('Team totals - Red Today:', teamRedTotal, 'Blue Today:', teamBlueTotal);
+    console.log('Team total steps - Red:', teamRedTotalSteps, 'Blue:', teamBlueTotalSteps);
 
     // Create teams structure
     const teams = [
@@ -113,46 +140,59 @@ export default function Home() {
         id: 'red',
         name: 'Fire Walkers',
         todayTotalSteps: teamRedTotal,
+        totalSteps: teamRedTotalSteps,
         members: teamRedUsers.map(user => ({
           id: user.ID,
           name: user.Name,
           todaySteps: user.StepsToday || 0,
-          totalSteps: user.TotalSteps || 0
+          totalSteps: user.TotalSteps || 0,
+          teamAssignment: user.TeamAssignment,
+          playerNumber: user.PlayerNumber
         }))
       },
       {
         id: 'blue',
         name: 'Storm Striders',
         todayTotalSteps: teamBlueTotal,
+        totalSteps: teamBlueTotalSteps,
         members: teamBlueUsers.map(user => ({
           id: user.ID,
           name: user.Name,
           todaySteps: user.StepsToday || 0,
-          totalSteps: user.TotalSteps || 0
+          totalSteps: user.TotalSteps || 0,
+          teamAssignment: user.TeamAssignment,
+          playerNumber: user.PlayerNumber
         }))
       }
     ];
 
     // Get top performers for daily matchup
-    const topRedPerformer = teamRedUsers.reduce((prev, current) => 
-      (prev.StepsToday > current.StepsToday) ? prev : current
-    );
-    const topBluePerformer = teamBlueUsers.reduce((prev, current) => 
-      (prev.StepsToday > current.StepsToday) ? prev : current
-    );
+    const topRedPerformer = teamRedUsers.length > 0 ? teamRedUsers.reduce((prev, current) => 
+      (prev.StepsToday || 0) > (current.StepsToday || 0) ? prev : current
+    ) : { Name: 'No Red Players', StepsToday: 0, PlayerNumber: 0 };
+    
+    const topBluePerformer = teamBlueUsers.length > 0 ? teamBlueUsers.reduce((prev, current) => 
+      (prev.StepsToday || 0) > (current.StepsToday || 0) ? prev : current
+    ) : { Name: 'No Blue Players', StepsToday: 0, PlayerNumber: 0 };
+
+    console.log('Top performers - Red:', topRedPerformer, 'Blue:', topBluePerformer);
 
     const todaysMatchup = {
       player1: {
         name: topRedPerformer.Name,
         steps: topRedPerformer.StepsToday || 0,
-        team: 'red'
+        team: 'red',
+        playerNumber: topRedPerformer.PlayerNumber || 0
       },
       player2: {
         name: topBluePerformer.Name,
         steps: topBluePerformer.StepsToday || 0,
-        team: 'blue'
+        team: 'blue',
+        playerNumber: topBluePerformer.PlayerNumber || 0
       }
     };
+
+    console.log('Final transformed data:', { teams, todaysMatchup });
 
     return {
       teams,
@@ -212,11 +252,12 @@ export default function Home() {
 
   const { teams, todaysMatchup } = appData;
   const [teamRed, teamBlue] = teams;
-
-  // Calculate overall stats
-  const totalTodaySteps = teams.reduce((sum, team) => sum + team.todayTotalSteps, 0);
-  const redWinning = teamRed.todayTotalSteps > teamBlue.todayTotalSteps;
-  const stepDifference = Math.abs(teamRed.todayTotalSteps - teamBlue.todayTotalSteps);
+  console.log(teamRed);
+  
+  // Calculate overall stats using total steps instead of today's steps
+  const totalCombinedSteps = teams.reduce((sum, team) => sum + team.totalSteps, 0);
+  const redWinning = teamRed.totalSteps > teamBlue.totalSteps;
+  const stepDifference = Math.abs(teamRed.totalSteps - teamBlue.totalSteps);
 
   return (
     <div className="min-h-screen bg-background">
@@ -266,7 +307,7 @@ export default function Home() {
               </div>
               <span className="font-semibold text-foreground">Total Steps</span>
             </div>
-            <StepCounter steps={totalTodaySteps} label="Combined Today" variant="large" />
+            <StepCounter steps={totalCombinedSteps} label="Combined Total" variant="large" />
           </div>
 
           <div className="bg-gradient-to-br from-team-red-light/20 to-team-red/10 rounded-2xl p-6 border border-team-red/20">
@@ -276,7 +317,7 @@ export default function Home() {
               </div>
               <span className="font-semibold text-foreground">Fire Walkers</span>
             </div>
-            <StepCounter steps={teamRed.todayTotalSteps} label="Team Total" variant="team-red" />
+            <StepCounter steps={teamRed.totalSteps} label="Team Total" variant="team-red" />
           </div>
 
           <div className="bg-gradient-to-br from-team-blue-light/20 to-team-blue/10 rounded-2xl p-6 border border-team-blue/20">
@@ -286,7 +327,7 @@ export default function Home() {
               </div>
               <span className="font-semibold text-foreground">Storm Striders</span>
             </div>
-            <StepCounter steps={teamBlue.todayTotalSteps} label="Team Total" variant="team-blue" />
+            <StepCounter steps={teamBlue.totalSteps} label="Team Total" variant="team-blue" />
           </div>
 
           <div className="bg-card-80 backdrop-blur-sm rounded-2xl p-6 border border-border/50">
@@ -319,7 +360,7 @@ export default function Home() {
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-red-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
                   ⚡ EPIC BATTLE ARENA ⚡
                 </h2>
-                <p className="text-muted-foreground text-base sm:text-lg">Live Step War in Progress</p>
+                <p className="text-muted-foreground text-base sm:text-lg">Total Steps Competition</p>
                 <div className="flex justify-center space-x-1 mt-2">
                   <div className="w-2 h-2 bg-red-400 rounded-full animate-ping"></div>
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-ping animate-delay-200"></div>
@@ -328,8 +369,8 @@ export default function Home() {
               </div>
               
               <ProgressBar
-                value1={teamRed.todayTotalSteps}
-                value2={teamBlue.todayTotalSteps}
+                value1={teamRed.totalSteps}
+                value2={teamBlue.totalSteps}
                 label1="Fire Walkers"
                 label2="Storm Striders"
                 color1="red"
